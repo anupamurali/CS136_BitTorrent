@@ -18,7 +18,8 @@ class AmksStd(Peer):
         print "post_init(): %s here!" % self.id
         self.dummy_state = dict()
         self.dummy_state["cake"] = "lie"
-    
+        self.unchoke_slots = 4
+
     def requests(self, peers, history):
         """
         peers: available info about the peers (who has what pieces)
@@ -53,20 +54,31 @@ class AmksStd(Peer):
         peers.sort(key=lambda p: p.id)
         # request all available pieces from all peers!
         # (up to self.max_requests from each)
+        piece_directory = {}
+        piece_to_peer = {}
         for peer in peers:
-            av_set = set(peer.available_pieces)
-            isect = av_set.intersection(np_set)
-            n = min(self.max_requests, len(isect))
             # More symmetry breaking -- ask for random pieces.
             # This would be the place to try fancier piece-requesting strategies
             # to avoid getting the same thing from multiple peers at a time.
-            for piece_id in random.sample(isect, n):
-                # aha! The peer has this piece! Request it.
-                # which part of the piece do we need next?
-                # (must get the next-needed blocks in order)
-                start_block = self.pieces[piece_id]
-                r = Request(self.id, peer.id, piece_id, start_block)
-                requests.append(r)
+            for piece_id in isect:
+                if piece_id in piece_directory:
+                    piece_to_peer[piece_id].append(peer.id)
+                    piece_directory[piece_id] += 1
+                else:
+                    piece_to_peer[piece_id] = [peer.id]
+                    piece_directory[piece_id] = 1
+
+        rarest_pieces = []
+        for key, value in sorted(mydict.iteritems(), key=lambda (k,v): (v,k)):
+            rarest_pieces.append(key)
+
+        for piece in rarest_pieces:
+            for peer in piece_to_peer[piece]:
+                if peer.num_requests < peer.max_requests:
+                    start_block = self.pieces[piece_id]
+                    r = Request(self.id, peer.id, piece_id, start_block)
+                    requests.append(r)
+                    peer.num_requests += 1
 
         return requests
 

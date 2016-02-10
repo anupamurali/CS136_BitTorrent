@@ -17,6 +17,7 @@ class Peer:
         self.max_requests = self.conf.max_up_bw / self.conf.blocks_per_piece + 1
         self.max_requests = min(self.max_requests, self.conf.num_pieces)
 
+        self.num_requests = 0 
         self.post_init()
 
     def __repr__(self):
