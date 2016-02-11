@@ -52,31 +52,30 @@ class AmksStd(Peer):
         # Sort peers by id.  This is probably not a useful sort, but other 
         # sorts might be useful
         peers.sort(key=lambda p: p.id)
-        # request all available pieces from all peers!
-        # (up to self.max_requests from each)
+
         piece_directory = {}
         piece_to_peer = {}
         for peer in peers:
-            # More symmetry breaking -- ask for random pieces.
-            # This would be the place to try fancier piece-requesting strategies
-            # to avoid getting the same thing from multiple peers at a time.
-            for piece_id in isect:
+            for piece_id in peer.available_pieces:
                 if piece_id in piece_directory:
-                    piece_to_peer[piece_id].append(peer.id)
+                    piece_to_peer[piece_id].append(peer)
                     piece_directory[piece_id] += 1
                 else:
-                    piece_to_peer[piece_id] = [peer.id]
+                    piece_to_peer[piece_id] = [peer]
                     piece_directory[piece_id] = 1
 
         rarest_pieces = []
-        for key, value in sorted(mydict.iteritems(), key=lambda (k,v): (v,k)):
+        for key, value in sorted(piece_directory.iteritems(), key=lambda (k,v): (v,k)):
             rarest_pieces.append(key)
 
         for piece in rarest_pieces:
+            print "Rare piece is " + str(piece)
+            print requests
             for peer in piece_to_peer[piece]:
-                if peer.num_requests < peer.max_requests:
-                    start_block = self.pieces[piece_id]
-                    r = Request(self.id, peer.id, piece_id, start_block)
+                if peer.num_requests < self.max_requests:
+                    start_block = self.pieces[piece]
+                    print "Start block is " + str(start_block)
+                    r = Request(self.id, peer.id, piece, start_block)
                     requests.append(r)
                     peer.num_requests += 1
 
@@ -112,6 +111,21 @@ class AmksStd(Peer):
 
             request = random.choice(requests)
             chosen = [request.requester_id]
+           
+            download_speed = {}
+            for peer in peers:
+                download_speed[peer.id] = len(history.uploads[peer.id][round]) / history.upload_rates[peer.id]
+
+            sorted_peers = []
+            for key, value in sorted(download_speed.iteritems(), key=lambda (k,v): (v,k)):
+                sorted_peers.append(key)
+
+            # Reciprocity
+            chosen = sorted_peers[:self.unchoke_slots - 1]
+
+            # Optimistic unchoking
+            chosen.append(random.choice(peers).id)
+
             # Evenly "split" my upload bandwidth among the one chosen requester
             bws = even_split(self.up_bw, len(chosen))
 
