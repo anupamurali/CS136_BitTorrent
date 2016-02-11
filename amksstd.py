@@ -33,7 +33,6 @@ class AmksStd(Peer):
         needed_pieces = filter(needed, range(len(self.pieces)))
         np_set = set(needed_pieces)  # sets support fast intersection ops.
 
-
         logging.debug("%s here: still need pieces %s" % (
             self.id, needed_pieces))
 
@@ -55,8 +54,13 @@ class AmksStd(Peer):
 
         piece_directory = {}
         piece_to_peer = {}
+        num_requests = {}
+
         for peer in peers:
-            for piece_id in peer.available_pieces:
+            num_requests[peer.id] = 0
+            av_set = set(peer.available_pieces)
+            isect = av_set.intersection(np_set)
+            for piece_id in list(isect):
                 if piece_id in piece_directory:
                     piece_to_peer[piece_id].append(peer)
                     piece_directory[piece_id] += 1
@@ -69,15 +73,12 @@ class AmksStd(Peer):
             rarest_pieces.append(key)
 
         for piece in rarest_pieces:
-            print "Rare piece is " + str(piece)
-            print requests
             for peer in piece_to_peer[piece]:
-                if peer.num_requests < self.max_requests:
+                if num_requests[peer.id] < self.max_requests:
                     start_block = self.pieces[piece]
-                    print "Start block is " + str(start_block)
                     r = Request(self.id, peer.id, piece, start_block)
                     requests.append(r)
-                    peer.num_requests += 1
+                    num_requests[peer.id] += 1
 
         return requests
 
@@ -91,8 +92,8 @@ class AmksStd(Peer):
 
         In each round, this will be called after requests().
         """
-
         round = history.current_round()
+
         logging.debug("%s again.  It's round %d." % (
             self.id, round))
         # One could look at other stuff in the history too here.
@@ -100,34 +101,43 @@ class AmksStd(Peer):
         # has a list of Download objects for each Download to this peer in
         # the previous round.
 
+        chosen = []
+        bws = []
+
         if len(requests) == 0:
             logging.debug("No one wants my pieces!")
-            chosen = []
-            bws = []
         else:
-            logging.debug("Still here: uploading to a random peer")
             # change my internal state for no reason
             self.dummy_state["cake"] = "pie"
-
-            request = random.choice(requests)
-            chosen = [request.requester_id]
            
-            download_speed = {}
-            for peer in peers:
-                download_speed[peer.id] = len(history.uploads[peer.id][round]) / history.upload_rates[peer.id]
+            if round != 0:
+                random.shuffle(requests)
+                chosen = requests[:self.unchoke_slots - 1]
+            else:
+                download_speed = {}
+                for download in history.downloads[round-1]:
+                    p_id = download.from_id
+                    if p_id not in download_speed:
+                        download_speed[p_id] = download.blocks
+                    else:
+                        download_speed[p_id] += download.blocks
+                
+                for peer in peers:
+                    if peer.id not in download_speed:
+                        download_speed[peer.id] = 0
 
-            sorted_peers = []
-            for key, value in sorted(download_speed.iteritems(), key=lambda (k,v): (v,k)):
-                sorted_peers.append(key)
+                sorted_peers = []
+                for key, value in sorted(download_speed.iteritems(), key=lambda (k,v): (v,k)):
+                    sorted_peers.append(key)
 
-            # Reciprocity
-            chosen = sorted_peers[:self.unchoke_slots - 1]
+                # Reciprocity
+                chosen = sorted_peers[:self.unchoke_slots - 1]
 
-            # Optimistic unchoking
-            chosen.append(random.choice(peers).id)
+                # Optimistic unchoking
+                chosen.append(random.choice(peers).id)
 
-            # Evenly "split" my upload bandwidth among the one chosen requester
-            bws = even_split(self.up_bw, len(chosen))
+                # Evenly "split" my upload bandwidth among the one chosen requester
+                bws = even_split(self.up_bw, len(chosen))
 
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
