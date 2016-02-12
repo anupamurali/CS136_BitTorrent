@@ -6,6 +6,8 @@
 # You'll want to copy this file to AgentNameXXX.py for various versions of XXX,
 # probably get rid of the silly logging messages, and then add more logic.
 
+from __future__ import division
+
 import random
 import logging
 
@@ -44,7 +46,7 @@ class AmksStd(Peer):
         logging.debug("look at the AgentHistory class in history.py for details")
         logging.debug(str(history))
 
-        requests = []   # We'll put all the things we want here
+        requests = []
         # Symmetry breaking is good...
         random.shuffle(needed_pieces)
         
@@ -96,23 +98,23 @@ class AmksStd(Peer):
 
         logging.debug("%s again.  It's round %d." % (
             self.id, round))
-        # One could look at other stuff in the history too here.
-        # For example, history.downloads[round-1] (if round != 0, of course)
-        # has a list of Download objects for each Download to this peer in
-        # the previous round.
-
-        chosen = []
-        bws = []
 
         if len(requests) == 0:
             logging.debug("No one wants my pieces!")
+            chosen = []
+            bws = []
         else:
-            # change my internal state for no reason
-            self.dummy_state["cake"] = "pie"
-           
+            chosen = []
+            bws = []
+
+            # Store peers who requested pieces from you
+            request_ids = []
+            for request in requests:
+                request_ids.append(request.requester_id)
+
             if round == 0:
-                random.shuffle(requests)
-                chosen = requests[:self.unchoke_slots - 1]
+                random.shuffle(request_ids)
+                chosen = request_ids[:self.unchoke_slots]
             else:
                 download_speed = {}
                 for download in history.downloads[round-1]:
@@ -131,16 +133,22 @@ class AmksStd(Peer):
                     sorted_peers.append(key)
 
                 # Reciprocity
-                chosen = sorted_peers[:self.unchoke_slots - 1]
+                index = 0
+                i = 0
+                while i < self.unchoke_slots and index < len(sorted_peers):
+                    if sorted_peers[index] in request_ids:
+                        chosen.append(sorted_peers[i])
+                        i += 1
+                    index += 1
 
                 # Optimistic unchoking
-                chosen.append(random.choice(peers).id)
+                chosen.append(random.choice(request_ids))
 
                 # Evenly "split" my upload bandwidth among the one chosen requester
                 bws = even_split(self.up_bw, len(chosen))
 
-        # create actual uploads out of the list of peer ids and bandwidths
+        # Create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
                    for (peer_id, bw) in zip(chosen, bws)]
-                   
+
         return uploads
