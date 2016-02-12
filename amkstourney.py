@@ -93,6 +93,17 @@ class AmksTourney(Peer):
                     requests.append(r)
                     num_requests[peer.id] += 1
 
+        total_up = 0
+        while 
+            greatest_ratio = max(self.ratios.values())
+            greatest_list = [key for key,value in self.ratios.items() if value == greatest_ratio]
+            choice = random.choice(greatest_list)
+            if (total_up + self.upload_rates[choice]) < self.cap:
+                if choice in request_ids:
+                    chosen.append(choice)
+                    bws.append(self.upload_rates[choice])
+            total_up += self.upload_rates[choice]
+
         return requests
 
     def uploads(self, requests, peers, history):
@@ -161,6 +172,7 @@ class AmksTourney(Peer):
                     if choice in request_ids:
                         chosen.append(choice)
                         bws.append(self.upload_rates[choice])
+                        self.ratios.pop(choice)
                 total_up += self.upload_rates[choice]
 
             # Update which peers have unchoked this agent
