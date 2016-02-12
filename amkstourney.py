@@ -81,29 +81,21 @@ class AmksTourney(Peer):
                     piece_to_peer[piece_id] = [peer]
                     piece_directory[piece_id] = 1
 
-        rarest_pieces = []
-        for key, value in sorted(piece_directory.iteritems(), key=lambda (k,v): (v,k)):
-            rarest_pieces.append(key)
-
-        for piece in rarest_pieces:
-            for peer in piece_to_peer[piece]:
+        while piece_directory:
+            most_rare_value = min(piece_directory.values())
+            rare_pieces = [k for k in piece_directory if piece_directory[k] == most_rare_value]
+            rand_piece = random.choice(rare_pieces)
+            rarest_list = piece_to_peer[rand_piece]
+            while rarest_list != []:
+                peer = random.choice(rarest_list)
                 if num_requests[peer.id] < self.max_requests:
-                    start_block = self.pieces[piece]
-                    r = Request(self.id, peer.id, piece, start_block)
+                    start_block = self.pieces[rand_piece]
+                    r = Request(self.id, peer.id, rand_piece, start_block)
                     requests.append(r)
                     num_requests[peer.id] += 1
-
-        total_up = 0
-        while 
-            greatest_ratio = max(self.ratios.values())
-            greatest_list = [key for key,value in self.ratios.items() if value == greatest_ratio]
-            choice = random.choice(greatest_list)
-            if (total_up + self.upload_rates[choice]) < self.cap:
-                if choice in request_ids:
-                    chosen.append(choice)
-                    bws.append(self.upload_rates[choice])
-            total_up += self.upload_rates[choice]
-
+                rarest_list.remove(peer)
+            piece_directory.pop(rand_piece)
+            
         return requests
 
     def uploads(self, requests, peers, history):
