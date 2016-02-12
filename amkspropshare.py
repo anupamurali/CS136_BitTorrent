@@ -98,7 +98,7 @@ class AmksPropShare(Peer):
         else:
             if round == 0:
                 # iterate through all requests and put all ids into chosen.
-                chosen = [request.peer_id for request in requests]
+                chosen = [request.requester_id for request in requests]
                 bws = even_split(self.up_bw, len(chosen))
             else: 
                 prop_share_ids = {}

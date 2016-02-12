@@ -15,6 +15,7 @@ from messages import Upload, Request
 from util import even_split
 from peer import Peer
 from collections import deque
+import operator 
 
 class AmksTourney(Peer):
     def post_init(self):
@@ -136,8 +137,22 @@ class AmksTourney(Peer):
 
             # Store peers who requested pieces from you
             request_ids = []
+            requested_pieces = {}
+            requesting_peers = {}
             for request in requests:
                 request_ids.append(request.requester_id)
+                if request.piece_id in requested_pieces:
+                    requested_pieces[request.piece_id] += 1
+                else:
+                    requested_pieces[request.piece_id] = 1
+                if request.piece_id in requesting_peers:
+                    requesting_peers[request.piece_id].append(request.requester_id)
+                else:
+                    requesting_peers[request.piece_id] = [request.requester_id]
+            
+            # Do not upload to peers that are requesting the most requested piece
+            max_piece = max(requested_pieces.iteritems(), key=operator.itemgetter(1))[0]
+            peers_to_avoid = requesting_peers[max_piece]
 
             # Order peers by decreasing reciprocation likelihood ratio
             for peer in peers:
@@ -164,7 +179,7 @@ class AmksTourney(Peer):
                 greatest_list = [key for key,value in self.ratios.items() if value == greatest_ratio]
                 choice = random.choice(greatest_list)
                 if (total_up + self.upload_rates[choice]) < self.cap:
-                    if choice in request_ids:
+                    if choice in request_ids and choice not in peers_to_avoid:
                         chosen.append(choice)
                         bws.append(self.upload_rates[choice])
                 self.ratios.pop(choice)
