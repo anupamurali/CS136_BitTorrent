@@ -19,7 +19,7 @@ class AmksPropShare(Peer):
         print "post_init(): %s here!" % self.id
         self.dummy_state = dict()
         self.dummy_state["cake"] = "lie"
-        self.unchoke_portion = 0.05
+        self.unchoke_portion = 0.1
     
     def requests(self, peers, history):
         """

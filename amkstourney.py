@@ -153,6 +153,8 @@ class AmksTourney(Peer):
             # Do not upload to peers that are requesting the most requested piece
             max_piece = max(requested_pieces.iteritems(), key=operator.itemgetter(1))[0]
             peers_to_avoid = requesting_peers[max_piece]
+            random_peer = random.choice(peers_to_avoid)
+            peers_to_avoid.remove(random_peer)
 
             # Order peers by decreasing reciprocation likelihood ratio
             for peer in peers:
