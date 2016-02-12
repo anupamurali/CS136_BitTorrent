@@ -157,21 +157,6 @@ class AmksTourney(Peer):
             # Order peers by decreasing reciprocation likelihood ratio
             for peer in peers:
                 self.ratios[peer.id] = self.download_rates[peer.id] / self.upload_rates[peer.id]
-            # sorted_ratios = deque()
-            # for key, value in sorted(self.ratios.iteritems(), key=lambda (k,v): (v,k)):
-            #     sorted_ratios.appendleft(key)
-
-            # # Unchoke until capacity is released
-            # total_up = 0
-            # index = 0
-            # while total_up < self.cap and index < len(sorted_ratios):
-            #     peer_id = sorted_ratios[index]
-            #     if (total_up + self.upload_rates[peer_id]) < self.cap:
-            #         if peer_id in request_ids:
-            #             chosen.append(peer_id)
-            #             bws.append(self.upload_rates[peer_id])
-            #     index += 1
-            #     total_up += self.upload_rates[peer_id]
 
             total_up = 0
             while total_up < self.cap:

@@ -19,7 +19,7 @@ class AmksPropShare(Peer):
         print "post_init(): %s here!" % self.id
         self.dummy_state = dict()
         self.dummy_state["cake"] = "lie"
-        self.unchoke_portion = 0.10
+        self.unchoke_portion = 0.05
     
     def requests(self, peers, history):
         """
@@ -129,9 +129,6 @@ class AmksPropShare(Peer):
                         bws[-1] += int(math.floor(self.up_bw*free_bw) - sum(bws))
                     if len(unshared) > 0:
                         bws.append(int(math.floor(self.up_bw-math.floor(self.up_bw*free_bw))))
-                print "TOTAL BANDWIDTHS = ",self.up_bw
-                print "BANDWIDTHS = ",bws
-
 
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
