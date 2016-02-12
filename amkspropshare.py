@@ -110,25 +110,25 @@ class AmksPropShare(Peer):
                         if dl.from_id == request.requester_id:
                             prop_share_ids[dl.from_id] = dl.blocks
                             total += prop_share_ids[dl.from_id]
+                requests_set = set(requests)
                 chosen = prop_share_ids.keys()
-                unshared = [request.requester_id for request in requests if request.requester_id not in prop_share_ids]
-                request = random.choice(unshared)
-                chosen.append(request)
-                chosen = [request.requester_id for request in requests]
+                chosen_set = set(chosen)
+                unshared_set = requests_set - chosen_set
+                unshared = list(unshared_set)
+                if len(unshared) > 0:
+                    request = random.choice(unshared)
+                    chosen.append(request)
                 free_bw = 1.0 - self.unchoke_portion 
                 bws = []
                 for peer_id in prop_share_ids: 
                     bws.append(math.floor(self.up_bw*free_bw*prop_share_ids[peer_id]/total))
-                if self.up_bw*free_bw > sum(bws):
+                if math.floor(self.up_bw*free_bw) > sum(bws):
                     if len(bws) == 0:
-                        bws.append(self.up_bw*free_bw - sum(bws))
+                        bws.append(math.floor(self.up_bw*free_bw) - sum(bws))
                     else:
-                        bws[-1] += self.up_bw*free_bw - sum(bws)
-                    bws.append(math.floor(self.up_bw*self.unchoke_portion))
-                logging.debug("Still here: uploading to a random peer")
-                # change my internal state for no reason
-
-                
+                        bws[-1] += math.floor(self.up_bw*free_bw) - sum(bws)
+                    if len(unshared) > 0:
+                        bws.append(math.floor(self.up_bw-math.floor(self.up_bw*free_bw)))
 
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
