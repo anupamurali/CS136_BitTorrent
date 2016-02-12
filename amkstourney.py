@@ -29,6 +29,7 @@ class AmksTourney(Peer):
         self.unchoked = dict()
         self.diff_available = dict()
         self.last_available = dict()
+        #self.piece_directory = dict() 
         self.alpha = 0.2
         self.gamma = 0.1
         self.r = 3
@@ -109,6 +110,8 @@ class AmksTourney(Peer):
         round = history.current_round()
         logging.debug("%s again.  It's round %d." % (
             self.id, round))
+        # Discount factor
+        gamma = 0.8 
         
         # Initialize u_j and d_j for all peers
         if round == 0:
@@ -205,5 +208,7 @@ class AmksTourney(Peer):
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
                    for (peer_id, bw) in zip(chosen, bws)]
+
+        self.cap *= gamma  
 
         return uploads
