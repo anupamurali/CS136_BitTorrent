@@ -161,7 +161,7 @@ class AmksTyrant(Peer):
                     if choice in request_ids:
                         chosen.append(choice)
                         bws.append(self.upload_rates[choice])
-                        self.ratios.pop(choice)
+                self.ratios.pop(choice)
                 total_up += self.upload_rates[choice]
 
             # Update which peers have unchoked this agent
