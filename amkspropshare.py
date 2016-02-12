@@ -109,7 +109,7 @@ class AmksPropShare(Peer):
                     for request in requests:
                         if dl.from_id == request.requester_id:
                             prop_share_ids[dl.from_id] = dl.blocks
-                            total += prop_share_ids[dl.from_id]
+                            total += dl.blocks
                 requests_set = set(requests)
                 chosen = prop_share_ids.keys()
                 chosen_set = set(chosen)
@@ -121,14 +121,17 @@ class AmksPropShare(Peer):
                 free_bw = 1.0 - self.unchoke_portion 
                 bws = []
                 for peer_id in prop_share_ids: 
-                    bws.append(math.floor(self.up_bw*free_bw*prop_share_ids[peer_id]/total))
+                    bws.append(int(math.floor(self.up_bw*free_bw*prop_share_ids[peer_id]/total)))
                 if math.floor(self.up_bw*free_bw) > sum(bws):
                     if len(bws) == 0:
-                        bws.append(math.floor(self.up_bw*free_bw) - sum(bws))
+                        bws.append(int(math.floor(self.up_bw*free_bw) - sum(bws)))
                     else:
-                        bws[-1] += math.floor(self.up_bw*free_bw) - sum(bws)
+                        bws[-1] += int(math.floor(self.up_bw*free_bw) - sum(bws))
                     if len(unshared) > 0:
-                        bws.append(math.floor(self.up_bw-math.floor(self.up_bw*free_bw)))
+                        bws.append(int(math.floor(self.up_bw-math.floor(self.up_bw*free_bw))))
+                print "TOTAL BANDWIDTHS = ",self.up_bw
+                print "BANDWIDTHS = ",bws
+
 
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
