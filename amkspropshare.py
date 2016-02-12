@@ -8,6 +8,7 @@
 
 import random
 import logging
+import math
 
 from messages import Upload, Request
 from util import even_split
@@ -18,6 +19,7 @@ class AmksPropShare(Peer):
         print "post_init(): %s here!" % self.id
         self.dummy_state = dict()
         self.dummy_state["cake"] = "lie"
+        self.unchoke_portion = 0.10
     
     def requests(self, peers, history):
         """
@@ -94,14 +96,39 @@ class AmksPropShare(Peer):
             chosen = []
             bws = []
         else:
-            logging.debug("Still here: uploading to a random peer")
-            # change my internal state for no reason
-            self.dummy_state["cake"] = "pie"
+            if round == 0:
+                # iterate through all requests and put all ids into chosen.
+                chosen = [request.peer_id for request in requests]
+                bws = even_split(self.up_bw, len(chosen))
+            else: 
+                prop_share_ids = {}
+                unshared = []
+                total = 0 
+                prev_received = history.downloads[round-1] 
+                for dl in prev_received:
+                    for request in requests:
+                        if dl.from_id == request.requester_id:
+                            prop_share_ids[dl.from_id] = dl.blocks
+                            total += prop_share_ids[dl.from_id]
+                chosen = prop_share_ids.keys()
+                unshared = [request.requester_id for request in requests if request.requester_id not in prop_share_ids]
+                request = random.choice(unshared)
+                chosen.append(request)
+                chosen = [request.requester_id for request in requests]
+                free_bw = 1.0 - self.unchoke_portion 
+                bws = []
+                for peer_id in prop_share_ids: 
+                    bws.append(math.floor(self.up_bw*free_bw*prop_share_ids[peer_id]/total))
+                if self.up_bw*free_bw > sum(bws):
+                    if len(bws) == 0:
+                        bws.append(self.up_bw*free_bw - sum(bws))
+                    else:
+                        bws[-1] += self.up_bw*free_bw - sum(bws)
+                    bws.append(math.floor(self.up_bw*self.unchoke_portion))
+                logging.debug("Still here: uploading to a random peer")
+                # change my internal state for no reason
 
-            request = random.choice(requests)
-            chosen = [request.requester_id]
-            # Evenly "split" my upload bandwidth among the one chosen requester
-            bws = even_split(self.up_bw, len(chosen))
+                
 
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
